@@ -4,17 +4,17 @@ use std::cmp::Ordering;
 
 
 fn main() {
-    println!("Result of fib: {} ", fib(5));
+    println!("Result of fib: {} ", fib(10, 1, 1));
 }
 
-fn fib (n: u32) -> u32{
+fn fib (n: u32, a: u32, b: u32) -> u32{
 
-    if n == 0 {
-        return 1;
-    } else if n == 1 {
-        return 1;
+    if n == 1 {
+        return b;
+    } else if n == 2 {
+        return b;
     } else {
-        return fib(n-2) + fib(n-1);
+        return fib(n-1, b, a+b);
     }
 }
 fn guess_game() {
