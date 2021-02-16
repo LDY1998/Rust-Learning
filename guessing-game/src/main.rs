@@ -3,7 +3,10 @@ use rand::Rng;
 use std::cmp::Ordering;
 
 
+
+
 fn main() {
+    
     println!("Result of fib: {} ", fib(10, 1, 1));
 }
 
