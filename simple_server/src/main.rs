@@ -2,6 +2,9 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::io::prelude::*;
 use std::fs;
+use thread_pool::ThreadPool;
+
+mod thread_pool;
 
 
 fn main() {
