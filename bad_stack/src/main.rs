@@ -5,10 +5,8 @@ mod first;
 
 fn main() {
 
-    let list: List<i32> = List::Elem(1, Box::new(List::Empty));
 
     let li2: List<i32> = cons(1, cons(2, List::Empty));
-    println!("list1: {:?}", list);
     println!("list2: {:?}", li2);
 
     println!("Head of li2: {}", car(&li2));
