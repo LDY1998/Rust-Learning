@@ -10,11 +10,15 @@ mod thread_pool;
 fn main() {
     
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    
+    let mut tp = thread_pool::ThreadPool::new(5);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
 
-        handle_connection(stream);
+        tp.execute(move || {
+            handle_connection(stream);
+        })
     }
 
 }
@@ -25,11 +29,8 @@ fn handle_connection(mut stream: TcpStream) {
     stream.read(&mut buffer).unwrap();
 
     let get = b"GET / HTTP/1.1 \r\n";
-
-    let thread_pool = thread_pool::new();
-
-    
-
+    println!("buffer: {:?}", String::from_utf8_lossy(&buffer[..]));
+    println!("start with get: {}", buffer.starts_with(get));
     if buffer.starts_with(get) {
         let contents = fs::read_to_string("hello.html").unwrap();
 
@@ -38,11 +39,8 @@ fn handle_connection(mut stream: TcpStream) {
             contents.len(),
             contents
         );
-
         stream.write(response.as_bytes()).unwrap();
-
         stream.flush().unwrap();
-
 
     } else {
 

@@ -13,20 +13,20 @@ type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
     pub fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         Worker {
             id: id,
-            thread: thread::spawn(move || {
+            thread: Some(thread::spawn(move || {
                 let job = receiver.lock().unwrap().recv().unwrap();
 
                 println!("The worker: {} got job, executing", id);
 
                 job();
-            }),
+            })),
         }
     }
 }
@@ -53,7 +53,7 @@ impl ThreadPool {
 
     pub fn execute<F>(&mut self, f: F)
     where
-        F: FnOnce() + Send + 'static + Display,
+        F: FnOnce() + Send + 'static ,
     {
 
         let job = Box::new(f);
@@ -61,4 +61,17 @@ impl ThreadPool {
 
     }
 
+}
+
+impl Drop for ThreadPool{
+    fn drop(&mut self) {
+        println!("Sending terminating message to all workers");
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker: {}", worker.id);
+            if let Some(t) = worker.thread.take() {
+                t.join().unwrap();
+            }
+        }
+    }
 }
