@@ -26,6 +26,10 @@ fn handle_connection(mut stream: TcpStream) {
 
     let get = b"GET / HTTP/1.1 \r\n";
 
+    let thread_pool = thread_pool::new();
+
+    
+
     if buffer.starts_with(get) {
         let contents = fs::read_to_string("hello.html").unwrap();
 
