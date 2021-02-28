@@ -56,3 +56,12 @@ where
         }
     }
 }
+
+pub fn list_ref<T>(idx: usize, list: &List<T>) -> &T {
+    match (idx, list) {
+        (0, List::Empty) => panic!("idx is out of range"), 
+        (0, List::Elem(ref data, _)) => data,
+        (_, List::Empty) => panic!("idx is out of range"),
+        (idx, List::Elem(_, next)) => list_ref(idx-1, &*next),
+    }
+}

@@ -1,6 +1,5 @@
-use first::{List, cons, car, cdr, map, filter};
+use first::{List, cons, car, cdr, map, filter, list_ref};
 use std::cmp::Ordering;
-
 
 mod first;
 
@@ -33,4 +32,11 @@ fn main() {
     println!("List after filtered: {:?}", filtered_li2);
 
     println!("original li2: {:?}", li2);
+
+    let first = list_ref(0, &li2);
+    let second = list_ref(1, &li2);
+
+    println!("first: {}, second: {}", first, second);
+
+    println!("third: {}", list_ref(2, &li2));
 }
