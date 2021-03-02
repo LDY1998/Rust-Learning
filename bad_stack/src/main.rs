@@ -1,4 +1,4 @@
-use first::{List, cons, car, cdr, map, filter, list_ref};
+use first::{List, cons, car, cdr, map, filter, list_ref, Stack};
 use std::cmp::Ordering;
 
 mod first;
@@ -36,5 +36,20 @@ fn main() {
 
     println!("first: {}, second: {}", first, second);
 
-    println!("third: {}", list_ref(2, &li2));
+    let mut stk: Stack<i32> = Stack::new();
+
+    println!("stack: {:?}", stk);
+
+    stk.push(1);
+
+
+    println!("stack: {:?}", stk);
+
+    stk.pop();
+
+
+    println!("stack: {:?}", stk);
+
+
+
 }

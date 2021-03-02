@@ -1,23 +1,28 @@
 use std::fmt::Debug;
+use std::mem;
 
 // List a = Empty | Elem a (List a)
 
 #[derive(Debug)]
 pub enum List<T> 
-where
+where T: Copy
 {
     Empty,
     Elem(Box<Node<T>>),
 }
 
+
 #[derive(Debug)]
 pub struct Node<T>
+where T: Copy
 {
     elem: T,
     next: List<T>
 }
 
-pub fn cons<T>(data: T, list: List<T>) -> List<T> {
+pub fn cons<T>(data: T, list: List<T>) -> List<T> 
+where T: Copy
+{
 
     List::Elem(Box::new(Node{
         elem: data,
@@ -25,7 +30,9 @@ pub fn cons<T>(data: T, list: List<T>) -> List<T> {
     }))
 }
 
-pub fn car<T>(list: &List<T>) -> &T {
+pub fn car<T>(list: &List<T>) -> &T 
+where T: Copy
+{
     
     match list {
         &List::Empty => panic!("Can't call car on empty list"),
@@ -34,7 +41,9 @@ pub fn car<T>(list: &List<T>) -> &T {
 
 }
 
-pub fn cdr<T>(list: &List<T>) -> &List<T> {
+pub fn cdr<T>(list: &List<T>) -> &List<T> 
+where T: Copy
+{
 
     match list {
         &List::Empty => panic!("Can't call cdr on empty list"),
@@ -45,7 +54,7 @@ pub fn cdr<T>(list: &List<T>) -> &List<T> {
 pub fn map<T, F>(f: F,list: &List<T>) -> List<T> 
 where
     F: Fn(&T) -> T,
-    T: Clone
+    T: Copy
 {
     match &list {
         &List::Empty => List::Empty,
@@ -59,7 +68,7 @@ where
 pub fn filter<T, F>(f: F, list: &List<T>) -> List<T>
 where 
     F: Fn(&T) -> bool,
-    T: Clone + Debug
+    T: Copy + Debug
 {
     match &list {
         &List::Empty => List::Empty,
@@ -78,12 +87,56 @@ where
 
 pub fn list_ref<T>(idx: usize, list: &List<T>) -> &T 
 where
-    T: Debug
+    T: Debug + Copy
 {
     match (idx, list) {
         (0, List::Empty) => panic!("idx is out of range"), 
         (0, List::Elem(ref node)) => &node.elem,
         (_, List::Empty) => panic!("idx is out of range"),
         (idx, List::Elem(ref node)) => list_ref(idx-1, &node.next),
+    }
+}
+
+#[derive(Debug)]
+pub struct Stack<T> 
+where T: Copy
+{
+    head: List<T>
+}
+
+
+impl<T> Stack<T> 
+where T: Copy
+{
+    pub fn new() -> Stack<T> {
+        Stack {
+            head: List::Empty,
+        }
+    }
+
+    pub fn push(&mut self, data: T) {
+        
+        // self.head = Box::new(cons(data, self.head));
+        
+        let new_node = Node {
+            elem: data,
+            next: mem::replace(&mut self.head, List::Empty),
+        };
+
+        self.head = List::Elem(Box::new(new_node));
+        
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+
+        match mem::replace(&mut self.head, List::Empty) {
+            List::Empty => None,
+            List::Elem(node) => {
+                self.head = node.next;
+                Some(node.elem)
+            }
+        }
+
+
     }
 }
