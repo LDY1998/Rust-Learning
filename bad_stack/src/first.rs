@@ -140,3 +140,19 @@ where T: Copy
 
     }
 }
+
+mod test {
+    use super::Stack;
+    #[test]
+    fn basic() {
+        let mut st = Stack::<i32>::new();
+
+        for i in 1..10 {
+            st.push(i);
+        }
+
+        for i in 9..0 {
+            assert_eq!(st.pop().unwrap(), i);
+        }
+    }
+}
