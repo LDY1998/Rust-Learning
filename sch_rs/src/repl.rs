@@ -36,26 +36,25 @@ impl Repl {
                 },
                 "load" => {
                     println!("load command: {}", cmd[1]);
-                    self.load(cmd[1]);
+                    match self.load(cmd[1]) {
+                        Ok(s) => println!("Content: {}", s),
+                        Err(e) => eprintln!("Error in loading: {}", e),
+                    };
                 }
                 _ => { continue; },
             }
         }
     }
 
-    fn load(&self, file: &str) {
+    fn load(&self, file: &str) -> Result<String, io::Error> {
 
         // let f = File::open(format!("./script/{}", file)).expect("File does not exist");
 
         let path = &format!("./example/{}", file);
 
-        let f = match File::open(path) {
-            Ok(_) => (),
-            Err(error) => eprintln!("{}", error),
-        };
-
-        let content = fs::read_to_string(path).expect("Cannot read the file");
-
-        println!("File content: {}", content);
+        match fs::read_to_string(path) {
+            Ok(contents) => Ok(contents),
+            Err(error) => Err(error),
+        }
     }
 }
