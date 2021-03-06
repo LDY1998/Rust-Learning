@@ -145,7 +145,7 @@ mod test {
     use super::Stack;
     #[test]
     fn basic() {
-        let mut st = Stack::<i32>::new();
+        let mut st = Stack::new();
 
         for i in 1..10 {
             st.push(i);
