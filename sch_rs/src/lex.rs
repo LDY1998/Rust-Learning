@@ -1,5 +1,6 @@
 use std::{vec::Vec};
 use std::iter::Peekable;
+use std::num::ParseIntError;
 
 pub struct Lexer;
 
@@ -64,7 +65,7 @@ impl Lexer {
 
         while let Some(&c) = it.peek() {
             match c {
-                '0'..='9' => {
+                '1'..='9' => {
                     res.push(Token::from(Lexer::get_number(c, &mut it)))
                 },
                 '(' | ')' | '+' | '-' | '=' => {
@@ -92,7 +93,9 @@ impl Lexer {
         let mut number = c.to_string().parse::<usize>().expect("Should have pass a integer");
 
         iter.next();
-        while let Some(Ok(digit)) = iter.peek().map(|c| c.to_string().parse::<usize>()) {
+        while let Some(Ok(digit)) = iter.peek().map(|c| {
+            c.to_string().parse::<usize>()
+        }) {
             number = number * 10 + digit;
             iter.next();
         }
