@@ -1,11 +1,15 @@
 use std::io;
 use std::io::{Write};
-use std::fs::File;
 use std::fs;
+use super::lex::{Lexer, Token};
+
+// mod lex;
+#[path = "./lex.rs"] pub mod lex;
 
 
-
-pub struct Repl;
+pub struct Repl {
+    pub lexer: Lexer,
+}
 
 
 impl Repl {
@@ -30,15 +34,17 @@ impl Repl {
             assert_eq!(cmd.len()<=2, true);
             
             match cmd[0] {
-                "quit" => { 
+                "quit" => {
                     println!("quitting the sch_rs");
-                    break; 
+                    break;
                 },
                 "load" => {
                     println!("load command: {}", cmd[1]);
                     match self.load(cmd[1]) {
-                        Ok(s) => println!("Content: {}", s),
-                        Err(e) => eprintln!("Error in loading: {}", e),
+                        Ok(s) => {
+                            println!("Tokenize result: {:?}", self.tokenize(&s))
+                        },
+                        Err(e) => eprintln!("Error in loading exmaple {}: {}", cmd[1], e),
                     };
                 }
                 _ => { continue; },
@@ -52,9 +58,10 @@ impl Repl {
 
         let path = &format!("./example/{}", file);
 
-        match fs::read_to_string(path) {
-            Ok(contents) => Ok(contents),
-            Err(error) => Err(error),
-        }
+        fs::read_to_string(path)
+    }
+
+    fn tokenize(&self, input: &String) -> Result<Vec<Token>, String> {
+        self.lexer.lex(input)
     }
 }
