@@ -1,8 +1,5 @@
-use repl::Repl;
-use lex::Lexer;
-
-mod repl;
-mod lex;
+use sch_rs::repl::Repl;
+use sch_rs::lex::Lexer;
 
 
 

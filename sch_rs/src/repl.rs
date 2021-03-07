@@ -1,10 +1,7 @@
 use std::io;
 use std::io::{Write};
 use std::fs;
-use super::lex::{Lexer, Token};
-
-// mod lex;
-#[path = "./lex.rs"] pub mod lex;
+use crate::lex::{Lexer, Token};
 
 
 pub struct Repl {
