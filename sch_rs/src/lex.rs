@@ -9,14 +9,9 @@ pub struct Lexer;
 #[allow(missing_docs)]
 pub enum Token {
     Integer(usize),
-    Decimal(f64),
     Identifier(String),
     OpenParen,
     CloseParen,
-    Plus,
-    Minus,
-    Times,
-    Equals,
 }
 
 impl From<usize> for Token {
@@ -25,20 +20,13 @@ impl From<usize> for Token {
     }
 }
 
-impl From<f64> for Token {
-    fn from(f: f64) -> Token {
-        Token::Decimal(f)
-    }
-}
+
 
 impl From<char> for Token {
     fn from(f: char) -> Token {
         match f {
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
-            '=' => Token::Equals,
-            '+' => Token::Plus,
-            '-' => Token::Minus,
             _ => panic!("Invalid character token: {}", f),
         }
     }
@@ -131,15 +119,4 @@ mod tests {
         assert_eq!(test_lexer.lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
     }
 
-    #[test]
-    fn lex_op() {
-        test_template(String::from("+"), vec![Token::Plus]);
-    }
-    
-    #[test]
-    fn lex_op_number() {
-        let test_input = String::from("+ 1 2");
-        let exp_res = vec![Token::Plus, Token::Integer(1), Token::Integer(2)];
-        test_template(test_input, exp_res);
-    }
 }
