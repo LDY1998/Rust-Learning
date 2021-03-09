@@ -1,11 +1,10 @@
 use std::io;
 use std::io::{Write};
 use std::fs;
-use crate::lex::{Lexer, Token};
+use crate::interpreter::{lex::Lexer, parser::Parser};
 
 
 pub struct Repl {
-    pub lexer: Lexer,
 }
 
 
@@ -39,7 +38,7 @@ impl Repl {
                     println!("load command: {}", cmd[1]);
                     match self.load(cmd[1]) {
                         Ok(s) => {
-                            println!("Tokenize result: {:?}", self.tokenize(&s))
+                            println!("Tokenize result: {:?}", self.interp(&s))
                         },
                         Err(e) => eprintln!("Error in loading exmaple {}: {}", cmd[1], e),
                     };
@@ -58,7 +57,12 @@ impl Repl {
         fs::read_to_string(path)
     }
 
-    fn tokenize(&self, input: &String) -> Result<Vec<Token>, String> {
-        self.lexer.lex(input)
+    fn interp(&self, input: &String) {
+        match Lexer::lex(input) {
+            Ok(tokens) => {
+                let nodes = Parser::parse(&tokens);
+            }
+            _ => panic!(format!("Error in lexing input: {}", input)),
+        }
     }
 }

@@ -2,10 +2,9 @@ use std::{vec::Vec};
 use std::iter::Peekable;
 use std::num::ParseIntError;
 
-pub struct Lexer;
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 #[allow(missing_docs)]
 pub enum Token {
     Integer(usize),
@@ -44,8 +43,10 @@ impl From<&str> for Token {
     }
 }
 
-impl Lexer {
-    pub fn lex(&self, input: &String) -> Result<Vec<Token>, String> {
+pub mod Lexer {
+    use super::*;
+
+    pub fn lex(input: &String) -> Result<Vec<Token>, String> {
 
         let mut res = Vec::new();
 
@@ -92,12 +93,7 @@ impl Lexer {
     }
 }
 
-pub fn test_template(input: String, exp: Vec<Token>) {
-    let test_lexer = Lexer;        
-    let test_input = input;
-    let act_res = test_lexer.lex(&test_input).unwrap();
-    assert_eq!(act_res, exp);
-}
+
 #[cfg(test)]
 mod tests {
 
@@ -107,16 +103,14 @@ mod tests {
 
     #[test]
     fn lex_simple_number() {
-        let test_lexer = Lexer;
         let test_input = "12345".to_string();
-        assert_eq!(test_lexer.lex(&test_input).unwrap(), vec![Token::Integer(12345)]);
+        assert_eq!(Lexer::lex(&test_input).unwrap(), vec![Token::Integer(12345)]);
     }
 
     #[test]
     fn lex_simple_identifier() {
-        let test_lexer = Lexer;
         let test_input = "hello".to_string();
-        assert_eq!(test_lexer.lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
+        assert_eq!(Lexer::lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
     }
 
 }

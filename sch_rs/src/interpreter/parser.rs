@@ -1,7 +1,9 @@
-use crate::lex::Token;
+use super::lex::{Token};
 use std::slice;
+use crate::util::parse_test_template;
 
 
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum Node {
     Identifier(String),
     Integer(usize),
@@ -59,10 +61,37 @@ impl<'a> Parser<'a> {
 
                 }
             },
+            None => {
+                if depth == 0 {
+                    Ok(None)
+                } else {
+                    Err(format!("Unexpected end of input at depth: {}", depth))
+                }
+            },
             _ => Err("Invalid token type!".to_string()),
         }
     }
    
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn parse_int() {
+        let input = vec![Token::Integer(1234)];
+        let exp = vec![Node::Integer(1234)];
+        parse_test_template(input, exp);
+    }
+    
+    #[test]
+    fn parse_paren_int() {
+        let input = vec![Token::OpenParen, Token::Integer(1234), Token::CloseParen];
+        let exp = vec![Node::List(vec![Node::Integer(1234)])];
+        parse_test_template(input, exp);
+    }
 }
 
 

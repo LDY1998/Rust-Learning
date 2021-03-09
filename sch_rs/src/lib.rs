@@ -1,3 +1,3 @@
 pub mod repl;
-pub mod lex;
-pub mod parser;
+pub mod interpreter;
+pub mod util;
