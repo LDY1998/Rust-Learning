@@ -60,7 +60,7 @@ impl Repl {
     fn interp(&self, input: &String) {
         match Lexer::lex(input) {
             Ok(tokens) => {
-                let nodes = Parser::parse(&tokens);
+                let nodes = Parser::parse(&tokens).unwrap();
             }
             _ => panic!(format!("Error in lexing input: {}", input)),
         }
