@@ -6,12 +6,14 @@ use std::fmt;
 
 
 
+#[derive(Debug)]
 struct RuntimeError;
 
 
+#[derive(PartialEq, Clone)]
 pub enum Value {
     Symbol(String),
-    Integer(i32),
+    Integer(usize),
     List(Vec<Value>),
 }
 
@@ -48,12 +50,61 @@ impl fmt::Debug for Value {
     }
 }
 
+impl Value {
+
+    fn from_nodes(nodes: &[Node]) -> Vec<Value> {
+        nodes.iter().map(Value::from_node).collect()
+    }
+
+    fn from_node(node: &Node) -> Value {
+        match node {
+            Node::Identifier(s) => Value::Symbol(s.clone()),
+            Node::Integer(i) => Value::Integer(i.clone()),
+            Node::List(nodes) => Value::List(Value::from_nodes(nodes)),
+        }
+    }
+}
+
+/*
+`(define x 2)
+`(+ x x x)
+*/
+
+// [Node::List
+//     (vec![
+//         Node::Identifier("define".to_string()), 
+//         Node::Identifier("x".to_string()), 
+//         Node::Integer(2)]), 
+//         Node::List(vec![
+//             Node::Identifier("+".to_string()), 
+//             Node::Identifier("x".to_string()), 
+//             Node::Identifier("x".to_string()), 
+//             Node::Identifier("x".to_string())
+//         ])]
+
+#[derive(Clone)]
 pub struct Env {
     parent: Option<Rc<RefCell<Env>>>,
     values: HashMap<String , Value>,
 }
 
 impl Env {
+
+
+    fn new_root(&self) -> Rc<RefCell<Env>> {
+        Rc::new(RefCell::new(Env {
+            parent: None,
+            values: HashMap::new(),
+        }))
+    }
+
+    fn get_root(env_ref: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
+        let env = env_ref.borrow();
+        match env.parent {
+            Some(ref p) => Env::get_root(p.clone()),
+            None => env_ref.clone(),
+        }
+    }
     fn new_child(env: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
         let new_env = Env {
             parent: Some(env),
@@ -62,13 +113,30 @@ impl Env {
 
         Rc::new(RefCell::new(new_env))
     }
+
+
 }
 
 
 /*
    TODO: The public eval function to produce a value based on AST
 */
-// pub fn eval(nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
+pub fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let values = Value::from_nodes(nodes);
 
+    eval_values(&values, env)
+}
 
-// }
+fn eval_values(values: &Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let mut res;
+    for v in values {
+        res = eval_value(&v, env.clone()).unwrap();
+    }
+
+    Ok(res)
+}
+
+fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+
+}
+
