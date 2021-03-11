@@ -142,6 +142,28 @@ impl Env {
         Rc::new(RefCell::new(new_env))
     }
 
+    pub fn define(&mut self, key: &String, value: &Value) -> Result<(), RuntimeError> {
+        match self.values.insert(String::from(key), value.clone()) {
+            Some(_) => runtime_error!("The identifier is already defined!: {:?}", key),
+            None => Ok(()),
+        }
+    }
+
+    pub fn set(&mut self, key: &String, value: &Value) -> Result<(), RuntimeError> {
+        match self.values.contains_key(key) {
+            true => {
+                self.values.insert(key.clone(), value.clone());
+                Ok(())
+            },
+            false => {
+                match &self.parent {
+                    Some(p) => p.borrow_mut().set(key, value),
+                    None => runtime_error!("Can't set an undefined variable: {:?}", key)
+                }
+            }
+        }
+    }
+
     pub fn get(&self, identifier: &String) -> Result<Value, RuntimeError> {
         match self.values.get(identifier) {
             Some(v) => Ok(v.clone()),
@@ -189,3 +211,27 @@ fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErro
     }
 }
 
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    /**
+     * * define a list of variables in current level env
+     * ! only for testing
+     */
+
+    fn insert_into_env(env: Rc<RefCell<Env>>, vars: &Vec<(String, Value)>) -> Rc<RefCell<Env>> {
+
+        for (key, value) in vars {
+            env.borrow_mut().define(key, value);
+        }
+
+        env
+    }
+
+
+    fn test_template(nodes: Vec<Node>, exp: Value) {
+        
+    }
+}
