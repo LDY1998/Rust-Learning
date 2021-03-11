@@ -6,12 +6,39 @@ use std::fmt;
 
 
 
-#[derive(Debug)]
-struct RuntimeError;
+
+pub struct RuntimeError {
+    msg: String,
+}
+
+impl fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Runtime Error: {}", self.msg)
+    }
+}
+
+impl fmt::Debug for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Runtime Error: {}", self.msg)
+    }
+}
+
+macro_rules! runtime_error {
+    ($($arg:tt),*) => (
+        return Err(RuntimeError { msg: format!($($arg),*)})
+    )
+}
+
+// macro_rules! runtime_error_1 {
+//     ((arg:tt)*) => (
+//         return Err(RuntimeError { msg: format!((arg)*)})
+//     )
+// }
 
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
+    Unit,
     Symbol(String),
     Integer(usize),
     List(Vec<Value>),
@@ -20,6 +47,7 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Value::Unit => write!(f, "()"),
             Value::Symbol(s) => write!(f, "{}", s),
             Value::Integer(i) => write!(f, "{}", i),
             Value::List(values) => {
@@ -114,6 +142,18 @@ impl Env {
         Rc::new(RefCell::new(new_env))
     }
 
+    pub fn get(&self, identifier: &String) -> Result<Value, RuntimeError> {
+        match self.values.get(identifier) {
+            Some(v) => Ok(v.clone()),
+            None => {
+                match &self.parent {
+                    Some(p) => p.borrow().get(identifier),
+                    None => runtime_error!("Used before define: {:?}", identifier),
+                }
+            },
+        }
+    }
+
 
 }
 
@@ -128,15 +168,24 @@ pub fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeEr
 }
 
 fn eval_values(values: &Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
-    let mut res;
+    let mut res = None;
     for v in values {
-        res = eval_value(&v, env.clone()).unwrap();
+        res = Some(eval_value(&v, env.clone()).unwrap());
     }
 
-    Ok(res)
+    match &res {
+        Some(val) => Ok(val.clone()),
+        None => Ok(Value::Unit)
+    }
 }
 
 fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
 
+    match value {
+        Value::Unit => Ok(value.clone()),
+        Value::Integer(i) => Ok(value.clone()),
+        Value::Symbol(s) => env.borrow().get(s),
+        Value::List(_) => Ok(value.clone()),
+    }
 }
 
