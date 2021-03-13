@@ -1,7 +1,6 @@
 use fmt::Display;
-
 use super::parser::Node;
-use std::{cell::{RefCell}, collections::HashMap, rc::Rc};
+use std::{cell::{Ref, RefCell}, collections::HashMap, rc::Rc};
 use std::fmt;
 
 
@@ -29,12 +28,6 @@ macro_rules! runtime_error {
     )
 }
 
-// macro_rules! runtime_error_1 {
-//     ((arg:tt)*) => (
-//         return Err(RuntimeError { msg: format!((arg)*)})
-//     )
-// }
-
 
 #[derive(PartialEq, Clone)]
 pub enum Value {
@@ -42,6 +35,93 @@ pub enum Value {
     Symbol(String),
     Integer(usize),
     List(Vec<Value>),
+    Procedure(Function),
+}
+
+pub type ValueOperation = fn(&[Value], Rc<RefCell<Env>>) -> Result<Value, RuntimeError>;
+
+pub enum Function {
+    Native(ValueOperation),
+    Closure(Vec<String>, Vec<Value>, Rc<RefCell<Env>>),
+}
+
+impl PartialEq for Function{
+    fn eq(&self, other: &Function) -> bool {
+        self == other
+    }
+}
+
+// * (p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
+fn native_apply(apply_args: Vec<Value>, env:Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    assert!(apply_args.len() >= 1);
+    match &apply_args[0] {
+        Value::Procedure(f) => {
+            let args = apply_args[1..].to_vec();
+            let eval_args: Vec<Value> = args.iter().map(|a| {
+                    eval_value(a, env.clone()).unwrap()
+            }).collect();
+            match f {
+                Function::Native(op) => {
+                    op(&eval_args[..], env)
+                },
+                Function::Closure(params, body, closure_env) => {
+                    let closure_env = closure_env.clone();
+                    let new_env = Env::new_child(closure_env);
+                    for (param, arg) in params.iter().zip(eval_args.iter()) {
+                        new_env.borrow_mut().define(param, arg).unwrap();
+                    }
+
+                    eval_values(body, new_env)
+                }
+            }
+        },
+        _ => runtime_error!("expect procedure apply but got: {:?}", apply_args),
+    }
+} 
+
+
+/*
+ * * (define name value)\(define (p_name params) body)
+ * args must be a vec with length greater than 2
+ */
+fn native_define(args: Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    assert!(args.len() >= 2);
+
+    let (name, val) = match &args[0] {
+        Value::Symbol(n) => {
+            let val = eval_value(&args[1], env.clone()).unwrap();
+            (n, val)
+        }
+        Value::List(list) => {
+            assert!(list.len() >= 2);
+            match &list[0] {
+                Value::Symbol(n) => {
+                    let res: Result<Vec<String>, RuntimeError> = (&list[1..]).iter().map(|x| {
+                        match x {
+                            Value::Symbol(s) => Ok(s.clone()),
+                            _ => runtime_error!("unexpected argument in define: {:?}", x),
+                        }
+                    }).collect();
+
+                    let params = res.unwrap();
+                    let body = (&args[1..]).to_vec();
+                    let val = Value::Procedure(Function::Closure(params, body, env.clone()));
+                    (n, val)
+                },
+                _ => runtime_error!("must supply a symbol as define name: {:?}", list),
+            }
+        },
+        _ => runtime_error!("invalid define: {:?}", args),
+    };
+
+    env.borrow_mut().define(&name, &val).unwrap();
+    Ok(val)
+}
+
+impl Clone for Function {
+    fn clone(&self) -> Function {
+        self.clone()
+    }
 }
 
 impl fmt::Display for Value {
@@ -56,7 +136,10 @@ impl fmt::Display for Value {
                 }).collect();
 
                 write!(f, "({})", &strs.join(" "))
-            }
+            },
+            Value::Procedure(_) => {
+                write!(f, "#procedure")
+            },
         }
     }
 }
@@ -119,7 +202,7 @@ pub struct Env {
 impl Env {
 
 
-    fn new_root(&self) -> Rc<RefCell<Env>> {
+    pub fn new_root() -> Rc<RefCell<Env>> {
         Rc::new(RefCell::new(Env {
             parent: None,
             values: HashMap::new(),
@@ -133,7 +216,8 @@ impl Env {
             None => env_ref.clone(),
         }
     }
-    fn new_child(env: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
+    // * return the new child env rc with parameter as its parent
+    pub fn new_child(env: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
         let new_env = Env {
             parent: Some(env),
             values: HashMap::new(),
@@ -175,8 +259,18 @@ impl Env {
             },
         }
     }
+}
 
+pub struct Evalator {
+    root: Rc<RefCell<Env>>
+}
 
+impl Evalator {
+    pub fn new() -> Evalator {
+        Evalator {
+            root: Env::new_root(),
+        }
+    }
 }
 
 
@@ -208,6 +302,7 @@ fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErro
         Value::Integer(i) => Ok(value.clone()),
         Value::Symbol(s) => env.borrow().get(s),
         Value::List(_) => Ok(value.clone()),
+        Value::Procedure(_) => Ok(value.clone()),
     }
 }
 
@@ -231,7 +326,16 @@ mod tests {
     }
 
 
-    fn test_template(nodes: Vec<Node>, exp: Value) {
-        
+    fn test_template(nodes: Vec<Node>, exp: Value, env: Rc<RefCell<Env>>) {
+
+        match eval(&nodes, env) {
+            Ok(v) => assert_eq!(v, exp),
+            _ => eprintln!("Test failure: evaluating: {:?}, expect: {:?}", nodes, exp),
+        }
+    }
+
+    #[test]
+    fn test_simple_integer() {
+        test_template(vec![Node::Integer(1)], Value::Integer(1), Env::new_root());
     }
 }
