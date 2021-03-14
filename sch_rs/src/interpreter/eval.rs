@@ -51,30 +51,39 @@ impl PartialEq for Function{
     }
 }
 
-// * (p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
-fn native_apply(apply_args: Vec<Value>, env:Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
-    assert!(apply_args.len() >= 1);
-    match &apply_args[0] {
-        Value::Procedure(f) => {
-            let args = apply_args[1..].to_vec();
-            let eval_args: Vec<Value> = args.iter().map(|a| {
-                    eval_value(a, env.clone()).unwrap()
-            }).collect();
-            match f {
-                Function::Native(op) => {
-                    op(&eval_args[..], env)
-                },
-                Function::Closure(params, body, closure_env) => {
-                    let closure_env = closure_env.clone();
-                    let new_env = Env::new_child(closure_env);
-                    for (param, arg) in params.iter().zip(eval_args.iter()) {
-                        new_env.borrow_mut().define(param, arg).unwrap();
-                    }
+/** 
+ * * evaluate expression, if the first item is a procedure we apply it
+ * * otherwise we just process it with eval_values
+ */
+fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let p = eval_value(&vals[0], env.clone()).unwrap();
 
-                    eval_values(body, new_env)
-                }
-            }
+    match &p {
+        Value::Procedure(f) => native_apply(f.clone(), &vals[1..], env),
+        _ => runtime_error!("first entry must be procedure: {:?}", vals),
+    }
+}
+
+// * (p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
+fn native_apply(func: Function, apply_args: &[Value], env:Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let args = apply_args[..].to_vec();
+    let eval_args: Vec<Value> = args.iter().map(|a| {
+        eval_value(a, env.clone()).unwrap()
+    }).collect();
+    match &func {
+        Function::Native(op) => {
+            op(&eval_args[..], env)
         },
+        Function::Closure(params, body, closure_env) => {
+            let closure_env = closure_env.clone();
+            let new_env = Env::new_child(closure_env);
+            for (param, arg) in params.iter().zip(eval_args.iter()) {
+                new_env.borrow_mut().define(param, arg).unwrap();
+            }
+
+            eval_values(body, new_env)
+        }
+
         _ => runtime_error!("expect procedure apply but got: {:?}", apply_args),
     }
 } 
@@ -84,7 +93,7 @@ fn native_apply(apply_args: Vec<Value>, env:Rc<RefCell<Env>>) -> Result<Value, R
  * * (define name value)\(define (p_name params) body)
  * args must be a vec with length greater than 2
  */
-fn native_define(args: Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+fn native_define(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     assert!(args.len() >= 2);
 
     let (name, val) = match &args[0] {
@@ -120,7 +129,11 @@ fn native_define(args: Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, Runti
 
 impl Clone for Function {
     fn clone(&self) -> Function {
-        self.clone()
+        // self.clone()
+        match self {
+            Function::Native(op) => Function::Native(op.clone()),
+            Function::Closure(params, body, env) => Function::Closure(params.clone(), body.clone(), env.clone()),
+        }
     }
 }
 
@@ -203,10 +216,14 @@ impl Env {
 
 
     pub fn new_root() -> Rc<RefCell<Env>> {
-        Rc::new(RefCell::new(Env {
-            parent: None,
-            values: HashMap::new(),
-        }))
+       let mut env =  Env {
+           parent: None,
+           values: HashMap::new(),
+       };
+
+       env.define(&"define".to_string(), &Value::Procedure(Function::Native(native_define))).unwrap();
+
+        Rc::new(RefCell::new(env))
     }
 
     fn get_root(env_ref: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
@@ -279,7 +296,7 @@ impl Evalator {
 */
 pub fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     let values = Value::from_nodes(nodes);
-
+    println!("values from nodes: {:?}", values);
     eval_values(&values, env)
 }
 
@@ -335,7 +352,12 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_integer() {
+    fn eval_simple_integer() {
         test_template(vec![Node::Integer(1)], Value::Integer(1), Env::new_root());
+    }
+
+    #[test]
+    fn eval_simple_iden() {
+        test_template(vec![Node::Identifier("x".to_string())], Value::Integer(1), insert_into_env(Env::new_root(), &vec![("x".to_string(), Value::Integer(1))]));
     }
 }

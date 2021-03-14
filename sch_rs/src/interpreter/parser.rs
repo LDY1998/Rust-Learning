@@ -10,6 +10,7 @@ pub enum Node {
     List(Vec<Node>),
 }
 
+
 pub struct Parser<'a> {
     tokens: slice::Iter<'a, Token>
 }
