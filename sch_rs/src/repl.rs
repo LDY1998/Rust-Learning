@@ -1,8 +1,7 @@
 use std::io;
 use std::io::{Write};
 use std::fs;
-use crate::interpreter::{lex::Lexer, parser::Parser};
-
+use crate::interpreter::{lex::lexer, parser::Parser};
 
 pub struct Repl {
 }
@@ -58,7 +57,7 @@ impl Repl {
     }
 
     fn interp(&self, input: &String) {
-        match Lexer::lex(input) {
+        match lexer::lex(input) {
             Ok(tokens) => {
                 let nodes = Parser::parse(&tokens).unwrap();
             }

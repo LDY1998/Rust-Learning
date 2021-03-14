@@ -43,7 +43,7 @@ impl From<&str> for Token {
     }
 }
 
-pub mod Lexer {
+pub mod lexer {
     use super::*;
 
     pub fn lex(input: &String) -> Result<Vec<Token>, String> {
@@ -55,7 +55,7 @@ pub mod Lexer {
         while let Some(&c) = it.peek() {
             match c {
                 '1'..='9' => {
-                    res.push(Token::from(Lexer::get_number(c, &mut it)))
+                    res.push(Token::from(lexer::get_number(c, &mut it)))
                 },
                 '(' | ')' | '+' | '-' | '=' => {
                     it.next();
@@ -104,13 +104,13 @@ mod tests {
     #[test]
     fn lex_simple_number() {
         let test_input = "12345".to_string();
-        assert_eq!(Lexer::lex(&test_input).unwrap(), vec![Token::Integer(12345)]);
+        assert_eq!(lexer::lex(&test_input).unwrap(), vec![Token::Integer(12345)]);
     }
 
     #[test]
     fn lex_simple_identifier() {
         let test_input = "hello".to_string();
-        assert_eq!(Lexer::lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
+        assert_eq!(lexer::lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
     }
 
 }

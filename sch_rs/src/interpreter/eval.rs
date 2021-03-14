@@ -88,6 +88,35 @@ fn native_apply(func: Function, apply_args: &[Value], env:Rc<RefCell<Env>>) -> R
     }
 } 
 
+/**
+ * * a general arithmatic native function for arithmatic operation
+ * ! args must be all Value::Integer, otherwise an runtime error is reported
+ */
+fn native_arithmatic(args: &[Value], env: Rc<RefCell<Env>>, f: fn(i1: usize, i2: usize) -> usize) -> Result<Value, RuntimeError> {
+    let args: Result<Vec<usize>, RuntimeError> = args.iter().map(|x| {
+        let v = eval_value(x, env.clone()).unwrap();
+        match v {
+            Value::Integer(i) => Ok(i),
+            _ => runtime_error!("invalid arguments for add: {:?}", v),
+        }
+    }).collect();
+
+
+    let args = args.unwrap();
+    let res = args.iter().fold(args[0],|acc, x| {
+        f(acc, *x)
+    });
+    
+
+    Ok(Value::Integer(res))
+
+}
+
+fn native_add(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    native_arithmatic(args, env, |a, b| {
+        a + b
+    })
+}
 
 /*
  * * (define name value)\(define (p_name params) body)
@@ -222,6 +251,7 @@ impl Env {
        };
 
        env.define(&"define".to_string(), &Value::Procedure(Function::Native(native_define))).unwrap();
+       env.define(&"+".to_string(), &Value::Procedure(Function::Native(native_add))).unwrap();
 
         Rc::new(RefCell::new(env))
     }
@@ -287,6 +317,10 @@ impl Evalator {
         Evalator {
             root: Env::new_root(),
         }
+    }
+
+    pub fn eval(&self, nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
+        eval(nodes, self.root.clone())
     }
 }
 
