@@ -57,7 +57,7 @@ pub mod lexer {
                 '1'..='9' => {
                     res.push(Token::from(lexer::get_number(c, &mut it)))
                 },
-                '(' | ')' | '+' | '-' | '=' => {
+                '(' | ')' | '+' | '-' | '=' | '[' | ']' => {
                     it.next();
                     res.push(Token::from(c))
                 },

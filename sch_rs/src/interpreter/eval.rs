@@ -88,6 +88,36 @@ fn native_apply(func: Function, apply_args: &[Value], env:Rc<RefCell<Env>>) -> R
     }
 } 
 
+/** 
+ * * (let ([n1 v1] ...) body)
+*/
+fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let eval_nv: Result<(), RuntimeError> = match &args[0] {
+        Value::List(assigns) => {
+            for assign in assigns {
+                match assign {
+                    Value::List(nv_pair) => {
+                        match &nv_pair[0] {
+                            Value::Symbol(ref s) => {
+                                env.borrow_mut().define(s, &eval_value(&nv_pair[1], env.clone()).unwrap());
+                            },
+                            _ => runtime_error!("invalid let syntax: {:?}", nv_pair),
+                        }
+                    },
+                    _ => runtime_error!("invalid let define list: {:?}", assign)
+                }
+            }
+            Ok(())
+        },
+        _ => runtime_error!("let-define requires but got: {:?}", args),
+    };
+
+    eval_nv.unwrap();
+
+    eval_value(&args[1], env.clone())
+
+}
+
 /**
  * * a general arithmatic native function for arithmatic operation
  * ! args must be all Value::Integer, otherwise an runtime error is reported
