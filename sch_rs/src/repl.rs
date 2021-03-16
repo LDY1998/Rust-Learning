@@ -1,7 +1,7 @@
 use std::io;
 use std::io::{Write};
 use std::fs;
-use crate::interpreter::{lex::lexer, parser::Parser};
+use crate::interpreter::{eval::Evalator, eval::{RuntimeError, Value}, lex::lexer, parser::Parser};
 
 pub struct Repl {
 }
@@ -50,18 +50,38 @@ impl Repl {
     fn load(&self, file: &str) -> Result<String, io::Error> {
 
         // let f = File::open(format!("./script/{}", file)).expect("File does not exist");
-
         let path = &format!("./example/{}", file);
 
         fs::read_to_string(path)
     }
 
-    fn interp(&self, input: &String) {
+    fn interp(&self, input: &String) -> Result<Value, RuntimeError> {
         match lexer::lex(input) {
             Ok(tokens) => {
                 let nodes = Parser::parse(&tokens).unwrap();
+                let evalator = Evalator::new();
+                let res = evalator.eval(&nodes);
+                println!("interp result: {:?}", res);
+                res
             }
             _ => panic!(format!("Error in lexing input: {}", input)),
         }
+    }
+}
+
+mod test {
+    use super::*;
+
+
+    fn test_template(input: &str, exp: Value) {
+        let reploop = Repl{};
+            match reploop.load(input) {
+                Ok(s) => assert_eq!(reploop.interp(&s).unwrap(), exp),
+                _ => panic!(format!("fail to load the file: {}", input)),
+            }
+    }
+    #[test]
+    fn test_load_parse_eval() {
+        test_template("test.sch", Value::Integer(2));
     }
 }

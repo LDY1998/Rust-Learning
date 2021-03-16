@@ -1,6 +1,5 @@
-use fmt::Display;
 use super::parser::Node;
-use std::{cell::{Ref, RefCell}, collections::HashMap, rc::Rc};
+use std::{cell::{RefCell}, collections::HashMap, rc::Rc};
 use std::fmt;
 
 
@@ -369,7 +368,7 @@ impl Evalator {
 /*
    TODO: The public eval function to produce a value based on AST
 */
-pub fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     let values = Value::from_nodes(nodes);
     println!("values from nodes: {:?}", values);
     eval_values(&values, env)
@@ -445,4 +444,12 @@ mod tests {
         let def_nodes = vec![Node::List(vec![Node::Identifier("define".to_string()), Node::Identifier("x".to_string()), Node::Integer(2)]), Node::Identifier("x".to_string())];
         test_template(def_nodes, Value::Integer(2), Env::new_root());
     }
+
+    // * (let ([x 2]) x)
+    #[test]
+    fn eval_let() {
+        let nodes = vec![Node::List(vec![Node::Identifier("let".to_string()), Node::List(vec![Node::List(vec![Node::Identifier("x".to_string()), Node::Integer(2)])]), Node::Identifier("x".to_string())])];
+        test_template(nodes, Value::Integer(2), Env::new_root());
+    }
+
 }
