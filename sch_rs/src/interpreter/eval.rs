@@ -64,21 +64,25 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
     }
 }
 
-// * (p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
-fn native_apply(func: Function, apply_args: &[Value], env:Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
-    let args = apply_args[..].to_vec();
-    let eval_args: Vec<Value> = args.iter().map(|a| {
-        eval_value(a, env.clone()).unwrap()
-    }).collect();
+/** 
+ * *(p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
+ * ! note that we only evaluate the argument in current env when a closure is applied
+ * ! native function don't require the argument evaluation, they should already be a valid value
+*/
+fn native_apply(func: Function, apply_args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    // let args = apply_args[..].to_vec();
+    // let eval_args: Vec<Value> = args.iter().map(|a| {
+    //     eval_value(a, env.clone()).unwrap()
+    // }).collect();
     match &func {
         Function::Native(op) => {
-            op(&eval_args[..], env)
+            op(&apply_args[..], env)
         },
         Function::Closure(params, body, closure_env) => {
             let closure_env = closure_env.clone();
             let new_env = Env::new_child(closure_env);
-            for (param, arg) in params.iter().zip(eval_args.iter()) {
-                new_env.borrow_mut().define(param, arg).unwrap();
+            for (param, arg) in params.iter().zip(apply_args.iter()) {
+                new_env.borrow_mut().define(param, &eval_value(&arg, env.clone()).unwrap()).unwrap();
             }
 
             eval_values(body, new_env)
@@ -92,11 +96,13 @@ fn native_apply(func: Function, apply_args: &[Value], env:Rc<RefCell<Env>>) -> R
  * * (let ([n1 v1] ...) body)
 */
 fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    let env = Env::new_child(env.clone());
     let eval_nv: Result<(), RuntimeError> = match &args[0] {
         Value::List(assigns) => {
             for assign in assigns {
                 match assign {
                     Value::List(nv_pair) => {
+                        assert!(nv_pair.len() == 2);
                         match &nv_pair[0] {
                             Value::Symbol(ref s) => {
                                 env.borrow_mut().define(s, &eval_value(&nv_pair[1], env.clone()).unwrap());
@@ -114,7 +120,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErr
 
     eval_nv.unwrap();
 
-    eval_value(&args[1], env.clone())
+    eval_value(&args[1], env)
 
 }
 
@@ -280,8 +286,9 @@ impl Env {
            values: HashMap::new(),
        };
 
-       env.define(&"define".to_string(), &Value::Procedure(Function::Native(native_define))).unwrap();
-       env.define(&"+".to_string(), &Value::Procedure(Function::Native(native_add))).unwrap();
+       env.define("define", &Value::Procedure(Function::Native(native_define))).unwrap();
+       env.define("+", &Value::Procedure(Function::Native(native_add))).unwrap();
+       env.define("let", &Value::Procedure(Function::Native(native_let))).unwrap();
 
         Rc::new(RefCell::new(env))
     }
@@ -303,11 +310,15 @@ impl Env {
         Rc::new(RefCell::new(new_env))
     }
 
-    pub fn define(&mut self, key: &String, value: &Value) -> Result<(), RuntimeError> {
+    fn define_internal(&mut self, key: &String, value: &Value) -> Result<(), RuntimeError> {
         match self.values.insert(String::from(key), value.clone()) {
             Some(_) => runtime_error!("The identifier is already defined!: {:?}", key),
             None => Ok(()),
         }
+    }
+
+    pub fn define(&mut self, key: &str, value: &Value) -> Result<(), RuntimeError> {
+        self.define_internal(&key.to_string(), value)
     }
 
     pub fn set(&mut self, key: &String, value: &Value) -> Result<(), RuntimeError> {
@@ -382,7 +393,9 @@ fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErro
         Value::Unit => Ok(value.clone()),
         Value::Integer(i) => Ok(value.clone()),
         Value::Symbol(s) => env.borrow().get(s),
-        Value::List(_) => Ok(value.clone()),
+        Value::List(vs) => {
+            eval_expression(vs, env.clone())
+        },
         Value::Procedure(_) => Ok(value.clone()),
     }
 }
@@ -423,5 +436,13 @@ mod tests {
     #[test]
     fn eval_simple_iden() {
         test_template(vec![Node::Identifier("x".to_string())], Value::Integer(1), insert_into_env(Env::new_root(), &vec![("x".to_string(), Value::Integer(1))]));
+    }
+
+
+    // * (define x 2) x
+    #[test]
+    fn eval_define() {
+        let def_nodes = vec![Node::List(vec![Node::Identifier("define".to_string()), Node::Identifier("x".to_string()), Node::Integer(2)]), Node::Identifier("x".to_string())];
+        test_template(def_nodes, Value::Integer(2), Env::new_root());
     }
 }
