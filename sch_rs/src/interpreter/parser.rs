@@ -30,11 +30,11 @@ impl<'a> Parser<'a> {
         loop {
             match self.parse_node(depth) {
                 Ok(Some(node)) => {nodes.push(node);},
-                Ok(None) =>  {
+                Ok(None) => {
                     return Ok(nodes);
                 },
-                _ => {
-                    return Err("Error in parsing nodes: {}".to_string());
+                Err(e) => {
+                    return Err(e);
                 }
             }
         }

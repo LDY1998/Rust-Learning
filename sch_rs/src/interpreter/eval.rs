@@ -136,12 +136,15 @@ fn native_arithmatic(args: &[Value], env: Rc<RefCell<Env>>, f: fn(i1: usize, i2:
         }
     }).collect();
 
-
+    //  ! we want to do arithmatic with arg[0] as initial and go over the vec
+    //  ! we need to advance the iterator one step so that we do that
+    //  ! the old way is directly call fold with args[0] as initial and that will compute args[0] twice
     let args = args.unwrap();
-    let res = args.iter().fold(args[0],|acc, x| {
+    let mut args_it = args.iter();
+    args_it.next();
+    let res = args_it.fold(args[0], |acc, x| {
         f(acc, *x)
     });
-    
 
     Ok(Value::Integer(res))
 
