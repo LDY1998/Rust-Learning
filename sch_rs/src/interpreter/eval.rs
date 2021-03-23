@@ -95,7 +95,7 @@ fn native_apply(func: Function, apply_args: &[Value], env: Rc<RefCell<Env>>) -> 
  * * (let ([n1 v1] ...) body)
 */
 fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
-    let env = Env::new_child(env.clone());
+    let new_env = Env::new_child(env.clone());
     let eval_nv: Result<(), RuntimeError> = match &args[0] {
         Value::List(assigns) => {
             for assign in assigns {
@@ -104,7 +104,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErr
                         assert!(nv_pair.len() == 2);
                         match &nv_pair[0] {
                             Value::Symbol(ref s) => {
-                                env.borrow_mut().define(s, &eval_value(&nv_pair[1], env.clone()).unwrap());
+                                new_env.borrow_mut().define(s, &eval_value(&nv_pair[1], env.clone()).unwrap());
                             },
                             _ => runtime_error!("invalid let syntax: {:?}", nv_pair),
                         }
@@ -119,7 +119,7 @@ fn native_let(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErr
 
     eval_nv.unwrap();
 
-    eval_value(&args[1], env)
+    eval_value(&args[1], new_env)
 
 }
 
