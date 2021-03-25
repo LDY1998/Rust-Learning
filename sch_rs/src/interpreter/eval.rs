@@ -63,6 +63,47 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
     }
 }
 
+/**
+ * * (lambda ([xs vs] ...) body) produce a procedure
+ */
+fn native_lambda(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    match &args[0] {
+        Value::List(nvs) => {
+            let mut new_env = Env::new_child(env.clone());
+
+            let nvs: Result<Vec<(Value, Value)>, RuntimeError> = nvs.iter().map(|nv_pair| {
+                match &nv_pair {
+                    Value::List(nv) => Ok((nv[0].clone(), nv[1].clone())),
+                    _ => runtime_error!("Must provide lists in parameters: {:?}", nv_pair)
+                }
+            }).collect();
+
+            let nvs = nvs.unwrap();
+
+            let names: Result<Vec<String>, RuntimeError> = nvs.iter().map(|nv| {
+                match nv {
+                    (Value::Symbol(s), _) => Ok(s.to_string()),
+                    _ => runtime_error!("Must provide symbol as parameter names: {:?}", nv),
+                }
+            }).collect();
+
+            let names = names.unwrap();
+
+            let values: Result<Vec<Value>, RuntimeError> = nvs.iter().map(|nv| {
+                match nv {
+                    (_, v) => Ok(v.clone()),
+                    _ => runtime_error!("Must provide a list in parameter list: {:?}", nv)
+                }
+            }).collect();
+
+            let values = values.unwrap();
+
+            Ok(Value::Procedure(Function::Closure(names, values, new_env)))
+        }
+        _ => runtime_error!("Must provide parameter lists in function parameter: {:?}", args),
+    }
+}
+
 /** 
  * *(p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
  * ! note that we only evaluate the argument in current env when a closure is applied
