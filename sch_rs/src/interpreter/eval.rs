@@ -156,6 +156,11 @@ fn native_add(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErr
     })
 }
 
+fn native_times(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    native_arithmatic(args, env, |a, b| {
+        a * b
+    })
+}
 /*
  * * (define name value)\(define (p_name params) body)
  * args must be a vec with length greater than 2
@@ -291,6 +296,7 @@ impl Env {
        env.define("define", &Value::Procedure(Function::Native(native_define))).unwrap();
        env.define("+", &Value::Procedure(Function::Native(native_add))).unwrap();
        env.define("let", &Value::Procedure(Function::Native(native_let))).unwrap();
+       env.define("*", &Value::Procedure(Function::Native(native_times))).unwrap();
 
         Rc::new(RefCell::new(env))
     }
