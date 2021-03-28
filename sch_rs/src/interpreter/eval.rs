@@ -69,7 +69,7 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
 fn native_lambda(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     match &args[0] {
         Value::List(nvs) => {
-            let mut new_env = Env::new_child(env.clone());
+            let new_env = Env::new_child(env.clone());
 
             let nvs: Result<Vec<(Value, Value)>, RuntimeError> = nvs.iter().map(|nv_pair| {
                 match &nv_pair {
@@ -322,7 +322,7 @@ impl Value {
 #[derive(Clone)]
 pub struct Env {
     parent: Option<Rc<RefCell<Env>>>,
-    values: HashMap<String , Value>,
+    values: HashMap<String, Value>,
 }
 
 impl Env {
@@ -338,6 +338,7 @@ impl Env {
        env.define("+", &Value::Procedure(Function::Native(native_add))).unwrap();
        env.define("let", &Value::Procedure(Function::Native(native_let))).unwrap();
        env.define("*", &Value::Procedure(Function::Native(native_times))).unwrap();
+       env.define("lambda", &Value::Procedure(Function::Native(native_lambda))).unwrap();
 
         Rc::new(RefCell::new(env))
     }
