@@ -64,44 +64,25 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
 }
 
 /**
- * * (lambda ([xs vs] ...) body) produce a procedure
+ * * (lambda (xs ...) body) produce a procedure
  */
 fn native_lambda(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
-    match &args[0] {
-        Value::List(nvs) => {
-            let new_env = Env::new_child(env.clone());
+    let params = match &args[0] {
+        Value::List(ns) => {
 
-            let nvs: Result<Vec<(Value, Value)>, RuntimeError> = nvs.iter().map(|nv_pair| {
-                match &nv_pair {
-                    Value::List(nv) => Ok((nv[0].clone(), nv[1].clone())),
-                    _ => runtime_error!("Must provide lists in parameters: {:?}", nv_pair)
-                }
-            }).collect();
-
-            let nvs = nvs.unwrap();
-
-            let names: Result<Vec<String>, RuntimeError> = nvs.iter().map(|nv| {
+            let params: Result<Vec<String>, RuntimeError> = ns.iter().map(|nv| {
                 match nv {
-                    (Value::Symbol(s), _) => Ok(s.to_string()),
+                    Value::Symbol(s) => Ok(s.to_string()),
                     _ => runtime_error!("Must provide symbol as parameter names: {:?}", nv),
                 }
             }).collect();
 
-            let names = names.unwrap();
-
-            let values: Result<Vec<Value>, RuntimeError> = nvs.iter().map(|nv| {
-                match nv {
-                    (_, v) => Ok(v.clone()),
-                    _ => runtime_error!("Must provide a list in parameter list: {:?}", nv)
-                }
-            }).collect();
-
-            let values = values.unwrap();
-
-            Ok(Value::Procedure(Function::Closure(names, values, new_env)))
+            params.unwrap()
         }
         _ => runtime_error!("Must provide parameter lists in function parameter: {:?}", args),
-    }
+    };
+
+    Ok(Value::Procedure(Function::Closure(params, args[1..].to_vec(), Env::new_child(env.clone()))))
 }
 
 /** 
@@ -469,6 +450,13 @@ mod tests {
         env
     }
 
+    fn slice_to_node(idens: Vec<&str>) -> Vec<Node> {
+        let nodes = idens.iter().map(|s| {
+            Node::Identifier(s.to_string())
+        }).collect::<Vec<Node>>();
+
+        nodes
+    }
 
     fn test_template(nodes: Vec<Node>, exp: Value, env: Rc<RefCell<Env>>) {
 
@@ -502,5 +490,6 @@ mod tests {
         let nodes = vec![Node::List(vec![Node::Identifier("let".to_string()), Node::List(vec![Node::List(vec![Node::Identifier("x".to_string()), Node::Integer(2)])]), Node::Identifier("x".to_string())])];
         test_template(nodes, Value::Integer(2), Env::new_root());
     }
+
 
 }

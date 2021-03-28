@@ -59,6 +59,7 @@ impl Repl {
         match lexer::lex(input) {
             Ok(tokens) => {
                 let nodes = Parser::parse(&tokens).unwrap();
+                println!("nodes parsed: {:?}", nodes);
                 let evalator = Evalator::new();
                 let res = evalator.eval(&nodes);
                 println!("interp result: {:?}", res);
@@ -82,6 +83,11 @@ mod test {
     }
     #[test]
     fn test_load_parse_eval() {
-        test_template("test.sch", Value::Integer(2));
+        test_template("test.sch", Value::Integer(4));
+    }
+
+    #[test]
+    fn test_load_parse_eval_lambda() {
+        test_template("lambda.sch", Value::Integer(1));
     }
 }
