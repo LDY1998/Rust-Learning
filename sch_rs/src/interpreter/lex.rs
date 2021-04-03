@@ -1,10 +1,31 @@
 use std::{vec::Vec};
 use std::iter::Peekable;
 use std::num::ParseIntError;
+use std::fmt;
+
+pub struct SyntaxError {
+    msg: String,
+}
+impl fmt::Debug for SyntaxError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Syntax Error: {}", self.msg)
+    }
+}
+
+impl fmt::Display for SyntaxError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Syntax Error: {}", self.msg)
+    }
+}
+
+macro_rules! syntax_error {
+    ($($arg:tt),*) => (
+        return Err(SyntaxError { msg: format!($($arg),*)})
+    )
+}
 
 
-
-#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 #[allow(missing_docs)]
 pub enum Token {
     Integer(usize),
@@ -18,7 +39,6 @@ impl From<usize> for Token {
         Token::Integer(i)
     }
 }
-
 
 
 impl From<char> for Token {
@@ -46,7 +66,7 @@ impl From<&str> for Token {
 pub mod lexer {
     use super::*;
 
-    pub fn lex(input: &String) -> Result<Vec<Token>, String> {
+    pub fn lex(input: &String) -> Result<Vec<Token>, SyntaxError> {
 
         let mut res = Vec::new();
 
@@ -59,7 +79,12 @@ pub mod lexer {
             match c {
                 '1'..='9' => {
                     // println!("current number token: {}", c);
-                    res.push(Token::from(lexer::get_number(c, &mut it)))
+                    // res.push(Token::from(lexer::get_integer(c, &mut it)))
+                    let number = get_number_string(c, &mut it);
+                    match number.parse::<usize>() {
+                        Ok(n) => res.push(Token::from(n)),
+                        _ => syntax_error!("only support integer number but got: {:?}", number)
+                    }
                 },
                 '(' | ')' | '+' | '-' | '=' | '[' | ']' => {
                     // println!("current symbol token: {}", it.peek().unwrap());
@@ -91,18 +116,22 @@ pub mod lexer {
         Ok(res)
     }
 
-    fn get_number<T: Iterator<Item=char>>(c: char, iter: &mut Peekable<T>) -> usize {
-        let mut number = c.to_string().parse::<usize>().expect("Should have pass a integer");
+    fn get_number_string<T: Iterator<Item=char>> (c: char, iter: &mut Peekable<T>) -> String {
 
-        iter.next();
-        while let Some(Ok(digit)) = iter.peek().map(|c| {
-            c.to_string().parse::<usize>()
-        }) {
-            number = number * 10 + digit;
-            iter.next();
+        println!("getting the number ...");
+        let mut res: String = String::new();
+        loop {
+            let c = iter.peek().unwrap();
+            let digit = c.is_digit(10) || c ==  &'.';
+            if digit {
+                res.push(*c);
+                iter.next();
+            } else {
+                break;
+            }
         }
 
-        number
+        res
     }
 }
 
@@ -125,5 +154,6 @@ mod tests {
         let test_input = "hello".to_string();
         assert_eq!(lexer::lex(&test_input).unwrap(), vec![Token::Identifier("hello".to_string())]);
     }
+    
 
 }
