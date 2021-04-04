@@ -8,6 +8,7 @@ pub enum Node {
     Identifier(String),
     Integer(usize),
     List(Vec<Node>),
+    Boolean(bool),
 }
 
 
@@ -57,7 +58,7 @@ impl<'a> Parser<'a> {
                             Err("No matching open paren!".to_string())
                         }
                     },
-
+                    Token::Boolean(b) => Ok(Some(Node::Boolean(*b))),
                     Token::Identifier(name) => Ok(Some(Node::Identifier(name.to_string()))),
 
                 }

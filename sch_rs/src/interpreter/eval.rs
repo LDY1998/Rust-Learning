@@ -35,6 +35,7 @@ pub enum Value {
     Integer(usize),
     List(Vec<Value>),
     Procedure(Function),
+    Boolean(bool),
 }
 
 pub type ValueOperation = fn(&[Value], Rc<RefCell<Env>>) -> Result<Value, RuntimeError>;
@@ -61,6 +62,28 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
         Value::Procedure(f) => native_apply(f.clone(), &vals[1..], env),
         _ => runtime_error!("first entry must be procedure: {:?}", vals),
     }
+}
+
+/** 
+ * * (if pred v1 v2)
+*/
+fn native_if(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    match args.len() {
+        3 => {
+            match eval_value(&args[0], env.clone()) {
+                    Ok(Value::Boolean(b)) => {
+                        if !b {
+                            eval_value(&args[2], env.clone())
+                        } else {
+                            eval_value(&args[1], env.clone())
+                        }
+                    },
+                    _ => eval_value(&args[1], env.clone())
+            }
+        },
+        _ => runtime_error!("expect 1 predicate and 2 branches but got: {:?}", args)
+    }
+    
 }
 
 /**
@@ -247,6 +270,9 @@ impl fmt::Display for Value {
             Value::Procedure(_) => {
                 write!(f, "#procedure")
             },
+            Value::Boolean(b) => {
+                write!(f, "#{}", b)
+            }
         }
     }
 }
@@ -276,6 +302,7 @@ impl Value {
 
     fn from_node(node: &Node) -> Value {
         match node {
+            Node::Boolean(b) => Value::Boolean(b.clone()),
             Node::Identifier(s) => Value::Symbol(s.clone()),
             Node::Integer(i) => Value::Integer(i.clone()),
             Node::List(nodes) => Value::List(Value::from_nodes(nodes)),
@@ -320,6 +347,7 @@ impl Env {
        env.define("let", &Value::Procedure(Function::Native(native_let))).unwrap();
        env.define("*", &Value::Procedure(Function::Native(native_times))).unwrap();
        env.define("lambda", &Value::Procedure(Function::Native(native_lambda))).unwrap();
+       env.define("if", &Value::Procedure(Function::Native(native_if))).unwrap();
 
         Rc::new(RefCell::new(env))
     }
@@ -428,6 +456,7 @@ fn eval_value(value: &Value, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeErro
             eval_expression(vs, env.clone())
         },
         Value::Procedure(_) => Ok(value.clone()),
+        Value::Boolean(_) => Ok(value.clone()),
     }
 }
 

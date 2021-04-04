@@ -90,4 +90,9 @@ mod test {
     fn test_load_parse_eval_lambda() {
         test_template("lambda.sch", Value::Integer(1));
     }
+
+    #[test]
+    fn test_load_parse_eval_if() {
+        test_template("if.sch", Value::Integer(2));
+    }
 }

@@ -28,6 +28,7 @@ macro_rules! syntax_error {
 #[derive(Debug, PartialEq, Clone, Eq)]
 #[allow(missing_docs)]
 pub enum Token {
+    Boolean(bool),
     Integer(usize),
     Identifier(String),
     OpenParen,
@@ -81,6 +82,7 @@ pub mod lexer {
                     // println!("current number token: {}", c);
                     // res.push(Token::from(lexer::get_integer(c, &mut it)))
                     let number = get_number_string(c, &mut it);
+                    println!("number string: {:?}", number);
                     match number.parse::<usize>() {
                         Ok(n) => res.push(Token::from(n)),
                         _ => syntax_error!("only support integer number but got: {:?}", number)
@@ -103,6 +105,15 @@ pub mod lexer {
                         is_iden
                     }).collect::<String>();
                     res.push(Token::from(str_token));
+                },
+                '#' => {
+                    it.next();
+                    match it.peek().unwrap() {
+                        &'t' => res.push(Token::Boolean(true)),
+                        &'f' => res.push(Token::Boolean(false)),
+                        _ => syntax_error!("invalid boolean expression"),
+                    }
+                    it.next();
                 }
                 _ => {
                     // println!("token to skip: {}", it.peek().unwrap());
@@ -116,18 +127,23 @@ pub mod lexer {
         Ok(res)
     }
 
+
     fn get_number_string<T: Iterator<Item=char>> (c: char, iter: &mut Peekable<T>) -> String {
 
         println!("getting the number ...");
         let mut res: String = String::new();
         loop {
-            let c = iter.peek().unwrap();
-            let digit = c.is_digit(10) || c ==  &'.';
-            if digit {
-                res.push(*c);
-                iter.next();
-            } else {
-                break;
+            match iter.peek() {
+                Some(c) => {
+                    let is_digit = c.is_digit(10) || c == &'.';
+                    if is_digit {
+                        res.push(*c);
+                        iter.next();
+                        continue;
+                    } 
+                    break;
+                }
+                _ => break
             }
         }
 
