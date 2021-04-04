@@ -127,6 +127,28 @@ pub mod lexer {
         Ok(res)
     }
 
+    fn read_until_splitter<T: Iterator<Item=char>> (d: Vec<char>, iter: &mut Peekable<T>) -> String {
+        let mut res: String = String::new();
+
+        loop {
+            match iter.peek() {
+                Some(c) => {
+                    let is_splitter = d.contains(c);
+                    match is_splitter {
+                        true => break,
+                        _ => {
+                            res.push(*c);
+                            iter.next();
+                        }
+                    }
+                }
+                None => break
+            }
+        }
+
+        res
+    }
+
 
     fn get_number_string<T: Iterator<Item=char>> (c: char, iter: &mut Peekable<T>) -> String {
 
