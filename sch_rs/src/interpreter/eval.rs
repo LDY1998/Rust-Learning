@@ -59,7 +59,7 @@ fn eval_expression(vals: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runti
     let p = eval_value(&vals[0], env.clone()).unwrap();
 
     match &p {
-        Value::Procedure(f) => native_apply(f.clone(), &vals[1..], env),
+        Value::Procedure(f) => proc_apply(f.clone(), &vals[1..], env),
         _ => runtime_error!("first entry must be procedure: {:?}", vals),
     }
 }
@@ -108,12 +108,23 @@ fn native_lambda(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, Runtime
     Ok(Value::Procedure(Function::Closure(params, args[1..].to_vec(), Env::new_child(env.clone()))))
 }
 
+
+/**
+ * * (apply proc arg-list)
+*/
+fn native_apply(args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+    match &args[0] {
+        Value::Procedure(f) => proc_apply(f.clone(), &args[1..].to_vec(), env.clone()),
+        _ => runtime_error!("expect a procedure but got {:?}", args)
+    }
+
+}
 /** 
  * *(p_name arg1 arg2 ...) evaluate the function body after all args evalualted in current env
  * ! note that we only evaluate the argument in current env when a closure is applied
  * ! native function don't require the argument evaluation, they should already be a valid value
 */
-fn native_apply(func: Function, apply_args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+fn proc_apply(func: Function, apply_args: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     // let args = apply_args[..].to_vec();
     // let eval_args: Vec<Value> = args.iter().map(|a| {
     //     eval_value(a, env.clone()).unwrap()
@@ -348,8 +359,9 @@ impl Env {
        env.define("*", &Value::Procedure(Function::Native(native_times))).unwrap();
        env.define("lambda", &Value::Procedure(Function::Native(native_lambda))).unwrap();
        env.define("if", &Value::Procedure(Function::Native(native_if))).unwrap();
-
-        Rc::new(RefCell::new(env))
+       env.define("apply", &Value::Procedure(Function::Native(native_apply))).unwrap();
+       env.define("eval", &Value::Procedure(Function::Native(eval_values))).unwrap();
+       Rc::new(RefCell::new(env))
     }
 
     fn get_root(env_ref: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
@@ -419,7 +431,7 @@ impl Evalator {
         }
     }
 
-    pub fn eval(&self, nodes: &Vec<Node>) -> Result<Value, RuntimeError> {
+    pub fn eval(&self, nodes: &[Node]) -> Result<Value, RuntimeError> {
         eval(nodes, self.root.clone())
     }
 }
@@ -428,13 +440,13 @@ impl Evalator {
 /*
    TODO: The public eval function to produce a value based on AST
 */
-fn eval(nodes: &Vec<Node>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+fn eval(nodes: &[Node], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     let values = Value::from_nodes(nodes);
     println!("values from nodes: {:?}", values);
     eval_values(&values, env)
 }
 
-fn eval_values(values: &Vec<Value>, env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
+fn eval_values(values: &[Value], env: Rc<RefCell<Env>>) -> Result<Value, RuntimeError> {
     let mut res = None;
     for v in values {
         res = Some(eval_value(&v, env.clone()).unwrap());
